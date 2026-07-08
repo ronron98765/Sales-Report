@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Report Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#F7F5EE;
+    --paper-dim:#EFEBDF;
+    --ink:#2B2620;
+    --ink-soft:#6B6355;
+    --green:#1F4D36;
+    --green-dark:#153826;
+    --gold:#C89B3C;
+    --line:#D8D2C4;
+    --danger:#A6402E;
+    --success:#1F6B43;
+    --warning:#9A6A13;
+    --radius:10px;
+    --shadow:0 8px 22px rgba(43,38,32,.08);
+  }
+  *{box-sizing:border-box;}
+  html{font-size:16px;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:'Source Serif 4',serif; margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  .masthead{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:clamp(14px,3vw,22px) clamp(14px,4vw,28px);
+    border-bottom:2px solid var(--ink);
+    flex-wrap:wrap;
+    gap:14px;
+    background:rgba(247,245,238,.96);
+    position:sticky;
+    top:0;
+    z-index:10;
+  }
+  .masthead .title-block{display:flex; align-items:center; gap:14px; min-width:0;}
+  .stamp{
+    width:52px; height:52px; border-radius:50%;
+    border:2.5px solid var(--green); color:var(--green);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Source Serif 4',serif; font-weight:700; font-size:11px;
+    text-align:center; line-height:1.1; letter-spacing:0.5px;
+    transform:rotate(-6deg); flex-shrink:0;
+  }
+  .masthead h1{font-size:clamp(18px,3vw,22px); letter-spacing:0.2px; white-space:normal;}
+  .masthead p{margin:2px 0 0; color:var(--ink-soft); font-size:13px;}
+
+  nav.tabs{display:flex; gap:6px; flex-wrap:wrap; width:auto;}
+  nav.tabs button{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px;
+    padding:9px 16px; border-radius:999px; border:1.5px solid var(--ink);
+    background:transparent; color:var(--ink); cursor:pointer;
+    transition:background .15s, color .15s;
+  }
+  nav.tabs button.active{background:var(--ink); color:var(--paper);}
+  nav.tabs button:not(.active):hover{background:var(--paper-dim);}
+  .nav-area{display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;}
+  .top-status{display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--ink-soft); white-space:nowrap;}
+
+  main{max-width:1180px; margin:0 auto; padding:clamp(14px,3vw,26px) clamp(12px,4vw,28px) 60px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .settings{
+    background:var(--paper-dim); border:1px solid var(--line); border-radius:var(--radius);
+    padding:12px 16px; margin-bottom:22px; font-size:13.5px;
+  }
+  .settings-header{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+  .settings-title{font-weight:700; color:var(--green-dark);}
+  .settings-row{display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; align-items:flex-end;}
+  .settings-row .field{flex:1 1 280px;}
+  .status-pill{display:inline-block; font-size:12px; padding:3px 10px; border-radius:999px; font-weight:600; margin-left:6px;}
+  .status-pill.ok{background:#DCEBE0; color:var(--green-dark);}
+  .status-pill.off{background:#EFE2DC; color:var(--danger);}
+
+  input, select{
+    width:100%;
+    font-family:'Inter',sans-serif; font-size:14px; padding:10px 11px;
+    border:1.5px solid var(--line); border-radius:7px; background:#fff; color:var(--ink);
+  }
+  input:focus, select:focus{outline:none; border-color:var(--green); box-shadow:0 0 0 3px rgba(31,77,54,.12);}
+  label{font-size:12.5px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.4px; display:block; margin-bottom:5px;}
+
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    padding:clamp(15px,2.8vw,22px); margin-bottom:20px;
+    box-shadow:var(--shadow);
+  }
+  .card h2{font-size:17px; margin-bottom:14px; color:var(--green-dark);}
+  .card-header{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px;}
+  .card-header h2{margin-bottom:0;}
+  .hint{font-size:13px; color:var(--ink-soft); line-height:1.45; margin:8px 0 0;}
+  .inline-note{font-size:12.5px; color:var(--ink-soft); margin-top:6px;}
+
+  .grid4{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px;}
+  .grid4 .full{grid-column:1/-1;}
+
+  .table-wrap{
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+  }
+  table{width:100%; border-collapse:collapse; font-size:13.5px; background:#fff;}
+  th, td{padding:9px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; vertical-align:middle;}
+  thead th{color:var(--ink-soft); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:0.3px; background:#FBFAF5; position:sticky; top:0; z-index:1;}
+  tbody tr:hover{background:var(--paper-dim);}
+  td input, td select{min-width:88px; padding:7px 8px; font-size:13px;}
+  .rm-btn{border:none; background:none; color:var(--danger); font-weight:700; cursor:pointer; font-size:18px; padding:4px 8px;}
+
+  .row-actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; align-items:center;}
+  button.primary, button.ghost, button.warn, button.danger{
+    min-height:42px;
+    border-radius:7px;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    padding:11px 18px;
+    font-family:'Inter',sans-serif;
+  }
+  button.primary{background:var(--green); color:#fff; border:none;}
+  button.primary:hover{background:var(--green-dark);}
+  button.ghost{background:transparent; border:1.5px solid var(--ink); color:var(--ink);}
+  button.ghost:hover{background:var(--paper-dim);}
+  button.warn{background:#FFF6DE; border:1.5px solid var(--warning); color:#6A4300;}
+  button.danger{background:#FFF0EC; border:1.5px solid var(--danger); color:var(--danger);}
+  button:disabled{opacity:.55; cursor:not-allowed;}
+
+  #formMsg, #localMsg, #duplicateMsg{font-size:13px; margin-top:10px; font-weight:600; line-height:1.45;}
+  .msg-ok{color:var(--success);}
+  .msg-warn{color:var(--warning);}
+  .msg-error{color:var(--danger);}
+
+  .draft-panel{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:14px;
+    align-items:center;
+    background:#FBFAF5;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px;
+  }
+  .draft-panel strong{display:block; color:var(--green-dark); margin-bottom:2px;}
+  .draft-name-field{flex:1 1 260px; min-width:220px;}
+  .draft-actions{display:flex; gap:8px; flex-wrap:wrap;}
+  .draft-actions button{min-height:34px; padding:7px 10px; font-size:12.5px;}
+  tr.selected-draft{background:#F1EAD8;}
+
+  #duplicateBox{display:none; border-color:#E6C66C; background:#FFFDF6;}
+  .duplicate-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;}
+  .summary-pills{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+  .summary-pills span{font-size:12px; padding:5px 10px; border-radius:999px; background:var(--paper-dim); color:var(--ink); font-weight:600;}
+
+  .filters{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px;}
+  .filter-search, .filter-actions, .filter-state{grid-column:1/-1;}
+  .search-row, .filter-button-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .search-row input{flex:1 1 260px;}
+  .search-row button, .filter-button-row button{flex:0 0 auto;}
+  .filter-state{font-size:12.5px; color:var(--ink-soft); line-height:1.45; padding:8px 10px; background:#FBFAF5; border:1px dashed var(--line); border-radius:7px;}
+  .trend-controls{display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;}
+  .trend-controls .field{min-width:180px;}
+  .trend-note{font-size:12.5px; color:var(--ink-soft); margin:0;}
+
+  .stat-row{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin-bottom:20px;}
+  .stat{background:var(--green); color:var(--paper); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden; min-width:0;}
+  .stat.alt{background:var(--gold); color:var(--green-dark);}
+  .stat .label{font-size:11.5px; text-transform:uppercase; letter-spacing:0.5px; opacity:.85; font-weight:600;}
+  .stat .value{font-family:'Source Serif 4',serif; font-size:clamp(20px,4vw,26px); margin-top:6px; word-break:break-word;}
+
+  .chart-row{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:20px; margin-bottom:20px;}
+  .chart-box{position:relative; height:300px; min-width:0;}
+  #dashMsg{font-size:13px; color:var(--ink-soft); margin-bottom:10px;}
+
+  @media(max-width:900px){
+    .filters{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .chart-row{grid-template-columns:1fr;}
+  }
+  @media(max-width:760px){
+    .masthead{align-items:flex-start; position:static;}
+    .nav-area{width:100%; justify-content:flex-start;}
+    nav.tabs{width:100%;}
+    nav.tabs button{flex:1 1 120px;}
+    .grid4{grid-template-columns:1fr 1fr;}
+    .stat-row{grid-template-columns:1fr 1fr;}
+    .draft-panel{grid-template-columns:1fr;}
+    .draft-panel .row-actions{margin-top:0;}
+    th, td{padding:8px;}
+  }
+  @media(max-width:520px){
+    html{font-size:15px;}
+    .stamp{width:46px; height:46px; font-size:10px;}
+    .masthead p{display:none;}
+    .grid4, .filters, .stat-row{grid-template-columns:1fr;}
+    .row-actions button, .duplicate-actions button, .settings-row button, .search-row button, .filter-button-row button{width:100%;}
+    .search-row, .filter-button-row{flex-direction:column; align-items:stretch;}
+    .chart-box{height:260px;}
+    main{padding-left:10px; padding-right:10px;}
+    .card{border-radius:8px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="title-block">
+    <div class="stamp">SALES<br>LEDGER</div>
+    <div>
+      <h1>Trade Fair Sales Report</h1>
+      <p>Exhibitor entry &amp; sales dashboard, synced to Google Sheets</p>
+    </div>
+  </div>
+  <div class="nav-area">
+    <nav class="tabs">
+      <button class="active" data-tab="entry">Entry Form</button>
+      <button data-tab="draftData">Draft Data</button>
+      <button data-tab="dashboard">Dashboard</button>
+    </nav>
+    <div class="top-status">Google Sheet <span id="connStatus" class="status-pill off">Not connected</span></div>
+  </div>
+</div>
+
+<main>
+  <section class="panel active" id="entry">
+    <div class="card">
+      <h2>Report details</h2>
+      <div class="grid4">
+        <div><label>Activity</label><input type="text" id="f_activity" placeholder="e.g. Kadiwa Trade Fair"></div>
+        <div><label>Venue</label><input type="text" id="f_venue" placeholder="e.g. Municipal Gym"></div>
+        <div><label>Date &amp; Time</label><input type="datetime-local" id="f_datetime"></div>
+        <div><label>Prepared by</label><input type="text" id="f_preparedby" placeholder="Enumerator name"></div>
+        <div class="full"><label>Exhibitor</label><input type="text" id="f_exhibitor" placeholder="Enter exhibitor name once for all line items below"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Commodity / Product line items</h2>
+      <p class="hint">Enter the exhibitor once in Report Details. Each line below has a hidden Record ID used by Google Sheets to detect duplicates.</p>
+      <div class="table-wrap">
+        <table id="lineTable">
+          <thead>
+            <tr>
+              <th style="min-width:150px;">Commodity / Product</th>
+              <th style="min-width:130px;">Place of Origin</th>
+              <th style="min-width:90px;">Beg. Inv.</th>
+              <th style="min-width:90px;">Unit</th>
+              <th style="min-width:90px;">Unit Price</th>
+              <th style="min-width:90px;">Qty Sold</th>
+              <th style="min-width:95px;">End. Balance</th>
+              <th style="min-width:100px;">Sales</th>
+              <th style="min-width:54px;"></th>
+            </tr>
+          </thead>
+          <tbody id="lineBody"></tbody>
+        </table>
+      </div>
+      <div class="row-actions">
+        <button class="ghost" id="addRowBtn">+ Add row</button>
+        <button class="ghost" id="clearFormBtn">Clear form</button>
+      </div>
+
+      <div class="draft-panel" style="margin-top:14px;">
+        <div>
+          <strong>Upload controls</strong>
+          <span class="hint">Save multiple drafts on this device, then load any draft again before uploading to Google Sheet.</span>
+        </div>
+        <div class="row-actions">
+          <div class="draft-name-field">
+            <label>Draft Name</label>
+            <input type="text" id="f_draftname" placeholder="Optional, e.g. Day 1 - Exhibitor A">
+          </div>
+          <button class="ghost" id="saveDraftBtn">Save as New Draft</button>
+          <button class="primary" id="submitBtn">Check &amp; Upload to Google Sheet</button>
+        </div>
+      </div>
+      <div id="localMsg"></div>
+      <div id="formMsg"></div>
+    </div>
+
+    <div class="card" id="duplicateBox">
+      <h2>Duplicate records found</h2>
+      <p class="hint" id="duplicateMsg">Some records may already exist in the Google Sheet. Choose what to do before uploading.</p>
+      <div class="summary-pills" id="duplicateSummary"></div>
+      <div class="table-wrap" style="margin-top:12px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Existing row</th>
+              <th>Date</th>
+              <th>Activity</th>
+              <th>Exhibitor</th>
+              <th>Commodity</th>
+              <th>Qty Sold</th>
+              <th>Sales</th>
+            </tr>
+          </thead>
+          <tbody id="duplicateBody"></tbody>
+        </table>
+      </div>
+      <div class="duplicate-actions">
+        <button class="primary" id="uploadSkipBtn">Skip duplicates</button>
+        <button class="warn" id="uploadKeepBtn">Keep all as new copies</button>
+        <button class="danger" id="uploadOverwriteBtn">Overwrite existing rows</button>
+      </div>
+      <p class="inline-note">Skip is safest. Keep all creates a new copy with a new Record ID. Overwrite updates the matching row in the Google Sheet.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="draftData">
+    <div class="card">
+      <div class="card-header">
+        <h2>Draft Data</h2>
+        <div class="row-actions" style="margin-top:0;">
+          <button class="ghost" id="refreshDraftListBtn">Refresh Draft List</button>
+          <button class="danger" id="clearAllDraftsBtn">Clear All Drafts</button>
+        </div>
+      </div>
+      <strong id="draftStatus">No saved drafts on this device.</strong>
+      <p class="hint" id="draftDetails">Saved drafts will appear here. Select a draft to preview, load it to the Entry Form, or delete it from this device.</p>
+      <div class="summary-pills" id="draftSummary"></div>
+    </div>
+
+    <div class="card">
+      <h2>Saved Drafts</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Saved</th><th>Draft Name</th><th>Activity</th><th>Venue</th><th>Exhibitor</th>
+              <th>Items</th><th>Total Sales</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="draftListBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 id="draftPreviewTitle">Drafted line items</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th><th>Activity</th><th>Venue</th><th>Prepared By</th><th>Exhibitor</th>
+              <th>Commodity</th><th>Origin</th><th>Unit Price</th><th>Qty Sold</th><th>Sales</th>
+            </tr>
+          </thead>
+          <tbody id="draftBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="dashboard">
+    <div class="card">
+      <div class="card-header">
+        <h2>Filters</h2>
+        <button class="ghost" id="refreshBtn">Refresh Data</button>
+      </div>
+      <div class="filters">
+        <div class="filter-search">
+          <label>Search</label>
+          <div class="search-row">
+            <input type="search" id="fl_search" placeholder="Search date, activity, venue, exhibitor, commodity, origin, prepared by, or status">
+            <button class="ghost" type="button" id="clearSearchBtn">Clear Search</button>
+          </div>
+        </div>
+        <div><label>Activity</label><select id="fl_activity"><option value="">All</option></select></div>
+        <div><label>Venue</label><select id="fl_venue"><option value="">All</option></select></div>
+        <div><label>Exhibitor</label><select id="fl_exhibitor"><option value="">All</option></select></div>
+        <div><label>Commodity</label><select id="fl_commodity"><option value="">All</option></select></div>
+        <div><label>From date</label><input type="date" id="fl_from"></div>
+        <div><label>To date</label><input type="date" id="fl_to"></div>
+        <div class="filter-actions">
+          <div class="filter-button-row">
+            <button class="ghost" type="button" id="clearFiltersBtn">Clear All Filters</button>
+          </div>
+        </div>
+        <div class="filter-state" id="filterState">No active filters.</div>
+      </div>
+    </div>
+
+    <div id="dashMsg">No data loaded yet.</div>
+
+    <div class="stat-row">
+      <div class="stat"><div class="label">Total Sales</div><div class="value mono" id="st_sales">₱0</div></div>
+      <div class="stat alt"><div class="label">Units Sold</div><div class="value mono" id="st_qty">0</div></div>
+      <div class="stat"><div class="label">Entries</div><div class="value mono" id="st_entries">0</div></div>
+      <div class="stat alt"><div class="label">Top Exhibitor</div><div class="value" id="st_top" style="font-size:17px;">—</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Time Trend</h2>
+        <div class="trend-controls">
+          <div class="field">
+            <label>Group trend by</label>
+            <select id="trendPeriod">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <p class="trend-note">These charts follow the active Dashboard filters and date range.</p>
+      <div class="chart-row" style="margin-top:14px; margin-bottom:0;">
+        <div>
+          <h2 style="font-size:15px; margin-bottom:10px; color:var(--green-dark);">Total sales by period</h2>
+          <div class="chart-box"><canvas id="chartSalesTrend"></canvas></div>
+        </div>
+        <div>
+          <h2 style="font-size:15px; margin-bottom:10px; color:var(--green-dark);">Participating exhibitors by period</h2>
+          <div class="chart-box"><canvas id="chartExhibitorTrend"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-row">
+      <div class="card"><h2>Sales by commodity</h2><div class="chart-box"><canvas id="chartCommodity"></canvas></div></div>
+      <div class="card"><h2>Sales by exhibitor</h2><div class="chart-box"><canvas id="chartExhibitor"></canvas></div></div>
+    </div>
+
+    <div class="card">
+      <h2>Detail</h2>
+      <div class="table-wrap">
+        <table id="dashTable">
+          <thead><tr>
+            <th>Date</th><th>Activity</th><th>Venue</th><th>Prepared By</th><th>Exhibitor</th><th>Commodity</th>
+            <th>Origin</th><th>Unit Price</th><th>Qty Sold</th><th>Sales</th><th>Status</th>
+          </tr></thead>
+          <tbody id="dashBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const CONFIG = { SHEET_URL: '' }; // Admin: paste the deployed Apps Script Web App URL here. Keep this hidden from users.
+const STORAGE = {
+  scriptUrl: 'salesReportLedger.scriptUrl',
+  drafts: 'salesReportLedger.localDrafts',
+  draft: 'salesReportLedger.localDraft', // legacy key from older versions; automatically migrated
+  selectedDraftId: 'salesReportLedger.selectedDraftId'
+};
+let allEntries = [];
+let rowCounter = 0;
+let pendingUploadRows = [];
+let currentDraftId = '';
+
+function el(id){ return document.getElementById(id); }
+function safeText(value){ return String(value ?? ''); }
+function escapeHtml(value){
+  return safeText(value)
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#039;');
+}
+function money(value){ return '₱' + (parseFloat(value)||0).toLocaleString(undefined,{maximumFractionDigits:2}); }
+function makeRecordId(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'local-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+}
+function todayIso(){ return new Date().toISOString(); }
+function setMsg(node, text, type){
+  node.className = type ? 'msg-' + type : '';
+  node.textContent = text;
+}
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    el(btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='dashboard') renderDashboard();
+    if(btn.dataset.tab==='draftData') renderDraftPreview();
+  });
+});
+
+/* ---------- Connection ---------- */
+// Backward compatibility: if an older version saved a URL in this browser, use it.
+// New deployments should hardcode the Apps Script Web App URL in CONFIG.SHEET_URL above.
+const storedUrl = localStorage.getItem(STORAGE.scriptUrl) || '';
+CONFIG.SHEET_URL = (CONFIG.SHEET_URL || storedUrl || '').trim();
+
+function setConnStatus(ok){
+  const pill = el('connStatus');
+  pill.textContent = ok ? 'Connected' : 'Not connected';
+  pill.className = 'status-pill ' + (ok ? 'ok' : 'off');
+}
+
+function setConnectionMessage(message){
+  if(el('connMsg')) el('connMsg').textContent = message;
+  if(el('dashMsg')) el('dashMsg').textContent = message;
+}
+
+el('refreshBtn').addEventListener('click', loadFromSheet);
+
+async function loadFromSheet(){
+  if(!CONFIG.SHEET_URL){
+    setConnStatus(false);
+    setConnectionMessage('No Google Sheet URL is configured. Ask the administrator to set CONFIG.SHEET_URL in the HTML file, then tap Refresh Data.');
+    return;
+  }
+  setConnectionMessage('Loading records from Google Sheet...');
+  try{
+    const res = await fetch(CONFIG.SHEET_URL + '?t=' + Date.now());
+    const data = await res.json();
+    allEntries = Array.isArray(data) ? data : [];
+    setConnStatus(true);
+    setConnectionMessage(`Connected. Loaded ${allEntries.length} entries from Google Sheet.`);
+    populateFilterOptions();
+    renderDashboard();
+  }catch(err){
+    setConnStatus(false);
+    setConnectionMessage('Not connected. Could not reach the Google Sheet. Tap Refresh Data again or check the Apps Script deployment.');
+  }
+}
+
+/* ---------- Entry form: line items ---------- */
+function addLineRow(data){
+  data = data || {};
+  const id = 'r' + (rowCounter++);
+  const tr = document.createElement('tr');
+  tr.dataset.id = id;
+  tr.dataset.recordId = data.recordId || data['Record ID'] || makeRecordId();
+  tr.innerHTML = `
+    <td><input type="text" class="c-commodity" value="${escapeHtml(data.commodity || data['Commodity/Product'] || '')}"></td>
+    <td><input type="text" class="c-origin" value="${escapeHtml(data.origin || data['Place of Origin (Brgy/Sitio)'] || '')}"></td>
+    <td><input type="number" class="c-begin" step="any" value="${escapeHtml(data.begin ?? data['Beginning Inventory'] ?? '')}"></td>
+    <td><input type="text" class="c-unit" value="${escapeHtml(data.unit || data['Unit'] || '')}"></td>
+    <td><input type="number" class="c-price" step="any" value="${escapeHtml(data.price ?? data['Unit Price'] ?? '')}"></td>
+    <td><input type="number" class="c-qty" step="any" value="${escapeHtml(data.qty ?? data['Quantity Sold'] ?? '')}"></td>
+    <td><input type="number" class="c-end" step="any" value="${escapeHtml(data.end ?? data['Ending Balance'] ?? '')}"></td>
+    <td class="c-sales mono">₱0</td>
+    <td><button class="rm-btn" title="Remove row" type="button">×</button></td>
+  `;
+  el('lineBody').appendChild(tr);
+
+  const price = tr.querySelector('.c-price');
+  const qty = tr.querySelector('.c-qty');
+  const begin = tr.querySelector('.c-begin');
+  const end = tr.querySelector('.c-end');
+  const salesCell = tr.querySelector('.c-sales');
+
+  function recalc(){
+    const p = parseFloat(price.value)||0;
+    const q = parseFloat(qty.value)||0;
+    const b = parseFloat(begin.value);
+    salesCell.textContent = money(p*q);
+    if(!isNaN(b)){
+      const suggested = b - q;
+      if(document.activeElement !== end) end.value = isNaN(suggested) ? '' : suggested;
+    }
+  }
+  [price, qty, begin].forEach(input=>input.addEventListener('input', recalc));
+  recalc();
+  tr.querySelector('.rm-btn').addEventListener('click', ()=>{
+    tr.remove();
+    if(!document.querySelector('#lineBody tr')) addLineRow();
+  });
+}
+el('addRowBtn').addEventListener('click', ()=>addLineRow());
+el('clearFormBtn').addEventListener('click', clearForm);
+
+function clearForm(){
+  el('f_activity').value = '';
+  el('f_venue').value = '';
+  el('f_datetime').value = '';
+  el('f_preparedby').value = '';
+  el('f_exhibitor').value = '';
+  if(el('f_draftname')) el('f_draftname').value = '';
+  currentDraftId = '';
+  localStorage.removeItem(STORAGE.selectedDraftId);
+  el('lineBody').innerHTML = '';
+  addLineRow();
+  hideDuplicateBox();
+  setMsg(el('formMsg'), 'Form cleared. Saved draft was not deleted.', 'warn');
+}
+
+function autoDraftName(report){
+  const datePart = report.datetime ? safeText(report.datetime).slice(0,10) : new Date().toLocaleDateString();
+  const pieces = [report.activity, report.exhibitor, datePart].filter(Boolean);
+  return pieces.join(' - ') || 'Untitled Draft';
+}
+
+function getDrafts(){
+  try{
+    const parsed = JSON.parse(localStorage.getItem(STORAGE.drafts) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(d=>d && d.report) : [];
+  }catch(err){
+    return [];
+  }
+}
+
+function setDrafts(drafts){
+  localStorage.setItem(STORAGE.drafts, JSON.stringify(drafts));
+}
+
+function migrateLegacyDraft(){
+  const legacyRaw = localStorage.getItem(STORAGE.draft);
+  if(!legacyRaw) return;
+  try{
+    const legacy = JSON.parse(legacyRaw);
+    if(legacy && legacy.report){
+      const drafts = getDrafts();
+      const draftId = legacy.draftId || makeRecordId();
+      if(!drafts.some(d=>d.draftId === draftId)){
+        legacy.draftId = draftId;
+        legacy.draftName = legacy.draftName || autoDraftName(legacy.report || {});
+        legacy.savedAt = legacy.savedAt || todayIso();
+        drafts.unshift(legacy);
+        setDrafts(drafts);
+      }
+    }
+  }catch(err){
+    // Ignore unreadable legacy draft.
+  }
+  localStorage.removeItem(STORAGE.draft);
+}
+
+function collectDraft(options = {}){
+  const report = {
+    activity: el('f_activity').value.trim(),
+    venue: el('f_venue').value.trim(),
+    datetime: el('f_datetime').value,
+    preparedBy: el('f_preparedby').value.trim(),
+    exhibitor: el('f_exhibitor').value.trim()
+  };
+  const draftNameInput = el('f_draftname') ? el('f_draftname').value.trim() : '';
+  const draft = {
+    draftId: options.draftId || makeRecordId(),
+    draftName: draftNameInput || autoDraftName(report),
+    savedAt: todayIso(),
+    report,
+    lines: Array.from(document.querySelectorAll('#lineBody tr')).map(tr=>{
+      if(!tr.dataset.recordId) tr.dataset.recordId = makeRecordId();
+      return {
+        recordId: tr.dataset.recordId,
+        commodity: tr.querySelector('.c-commodity').value.trim(),
+        origin: tr.querySelector('.c-origin').value.trim(),
+        begin: tr.querySelector('.c-begin').value,
+        unit: tr.querySelector('.c-unit').value.trim(),
+        price: tr.querySelector('.c-price').value,
+        qty: tr.querySelector('.c-qty').value,
+        end: tr.querySelector('.c-end').value
+      };
+    })
+  };
+  return draft;
+}
+
+function saveDraftObject(draft, replaceExisting = false){
+  const drafts = getDrafts();
+  const idx = drafts.findIndex(d=>d.draftId === draft.draftId);
+  if(replaceExisting && idx >= 0){
+    drafts[idx] = draft;
+  }else{
+    // Save Draft intentionally creates another local draft instead of overwriting old drafts.
+    if(drafts.some(d=>d.draftId === draft.draftId)) draft.draftId = makeRecordId();
+    drafts.unshift(draft);
+  }
+  setDrafts(drafts);
+  currentDraftId = draft.draftId;
+  localStorage.setItem(STORAGE.selectedDraftId, currentDraftId);
+  updateDraftStatus();
+  renderDraftPreview(draft);
+  return draft;
+}
+
+function ensureCurrentFormSavedAsDraft(){
+  const drafts = getDrafts();
+  const existing = currentDraftId ? drafts.find(d=>d.draftId === currentDraftId) : null;
+  const draft = collectDraft({ draftId: existing ? currentDraftId : makeRecordId() });
+  return saveDraftObject(draft, Boolean(existing));
+}
+
+function loadDraftObject(draft){
+  if(!draft || !draft.report) return;
+  currentDraftId = draft.draftId || '';
+  if(currentDraftId) localStorage.setItem(STORAGE.selectedDraftId, currentDraftId);
+  el('f_activity').value = draft.report.activity || '';
+  el('f_venue').value = draft.report.venue || '';
+  el('f_datetime').value = draft.report.datetime || '';
+  el('f_preparedby').value = draft.report.preparedBy || '';
+  el('f_exhibitor').value = draft.report.exhibitor || '';
+  if(el('f_draftname')) el('f_draftname').value = draft.draftName || autoDraftName(draft.report || {});
+  el('lineBody').innerHTML = '';
+  (draft.lines && draft.lines.length ? draft.lines : [{}]).forEach(line=>addLineRow(line));
+  hideDuplicateBox();
+  renderDraftPreview(draft);
+}
+
+function deleteDraftById(draftId, showMessage = true){
+  const drafts = getDrafts();
+  const target = drafts.find(d=>d.draftId === draftId);
+  const updated = drafts.filter(d=>d.draftId !== draftId);
+  setDrafts(updated);
+  if(currentDraftId === draftId){
+    currentDraftId = '';
+    localStorage.removeItem(STORAGE.selectedDraftId);
+  }
+  updateDraftStatus();
+  if(showMessage && target) setMsg(el('localMsg'), `Draft "${target.draftName || 'Untitled Draft'}" was deleted from this device.`, 'warn');
+}
+
+function updateDraftStatus(){
+  const drafts = getDrafts();
+  const clearAllBtn = el('clearAllDraftsBtn');
+  if(!drafts.length){
+    el('draftStatus').textContent = 'No saved drafts on this device.';
+    el('draftDetails').textContent = 'Save drafts from the Entry Form. This tab will list all saved drafts so users can preview, load, or delete them.';
+    if(el('draftSummary')) el('draftSummary').innerHTML = '';
+    if(clearAllBtn) clearAllBtn.disabled = true;
+    renderDraftPreview(null);
+    return;
+  }
+  const totalLines = drafts.reduce((sum,d)=>sum + ((d.lines || []).length), 0);
+  const totalSales = drafts.reduce((sum,d)=>sum + (d.lines || []).reduce((lineSum,line)=>lineSum + ((parseFloat(line.price)||0) * (parseFloat(line.qty)||0)), 0), 0);
+  el('draftStatus').textContent = `${drafts.length} saved draft${drafts.length === 1 ? '' : 's'} on this device.`;
+  el('draftDetails').textContent = `Saved locally only in this browser/device. Total drafted line items: ${totalLines}.`;
+  if(el('draftSummary')){
+    el('draftSummary').innerHTML = `
+      <span>${drafts.length} draft${drafts.length === 1 ? '' : 's'}</span>
+      <span>${totalLines} line item(s)</span>
+      <span>${money(totalSales)} drafted sales</span>
+    `;
+  }
+  if(clearAllBtn) clearAllBtn.disabled = false;
+  renderDraftPreview();
+}
+
+function renderDraftPreview(draft){
+  if(!el('draftBody')) return;
+  const drafts = getDrafts();
+  const savedSelected = localStorage.getItem(STORAGE.selectedDraftId) || currentDraftId;
+  if(!draft && drafts.length){
+    draft = drafts.find(d=>d.draftId === savedSelected) || drafts[0];
+  }
+  currentDraftId = draft && draft.draftId ? draft.draftId : currentDraftId;
+  if(draft && draft.draftId) localStorage.setItem(STORAGE.selectedDraftId, draft.draftId);
+
+  if(el('draftListBody')){
+    el('draftListBody').innerHTML = drafts.map(d=>{
+      const report = d.report || {};
+      const lines = d.lines || [];
+      const totalSales = lines.reduce((sum,line)=>sum + ((parseFloat(line.price)||0) * (parseFloat(line.qty)||0)), 0);
+      const savedDate = d.savedAt ? new Date(d.savedAt).toLocaleString() : '';
+      const selectedClass = draft && d.draftId === draft.draftId ? ' class="selected-draft"' : '';
+      return `
+        <tr${selectedClass}>
+          <td>${escapeHtml(savedDate)}</td>
+          <td>${escapeHtml(d.draftName || autoDraftName(report))}</td>
+          <td>${escapeHtml(report.activity || '')}</td>
+          <td>${escapeHtml(report.venue || '')}</td>
+          <td>${escapeHtml(report.exhibitor || '')}</td>
+          <td class="mono">${lines.length}</td>
+          <td class="mono">${money(totalSales)}</td>
+          <td>
+            <div class="draft-actions">
+              <button class="ghost" data-draft-action="preview" data-draft-id="${escapeHtml(d.draftId)}">Preview</button>
+              <button class="primary" data-draft-action="load" data-draft-id="${escapeHtml(d.draftId)}">Load</button>
+              <button class="danger" data-draft-action="delete" data-draft-id="${escapeHtml(d.draftId)}">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('') || '<tr><td colspan="8" style="color:var(--ink-soft);">No saved drafts available.</td></tr>';
+  }
+
+  if(!draft || !draft.report){
+    if(el('draftPreviewTitle')) el('draftPreviewTitle').textContent = 'Drafted line items';
+    el('draftBody').innerHTML = '<tr><td colspan="10" style="color:var(--ink-soft);">No saved draft data available.</td></tr>';
+    return;
+  }
+  const report = draft.report || {};
+  const lines = draft.lines || [];
+  if(el('draftPreviewTitle')) el('draftPreviewTitle').textContent = `Drafted line items: ${draft.draftName || autoDraftName(report)}`;
+  el('draftBody').innerHTML = lines.map(line=>{
+    const sales = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0);
+    return `
+      <tr>
+        <td>${escapeHtml(safeText(report.datetime || '').slice(0,10))}</td>
+        <td>${escapeHtml(report.activity || '')}</td>
+        <td>${escapeHtml(report.venue || '')}</td>
+        <td>${escapeHtml(report.preparedBy || '')}</td>
+        <td>${escapeHtml(report.exhibitor || '')}</td>
+        <td>${escapeHtml(line.commodity || '')}</td>
+        <td>${escapeHtml(line.origin || '')}</td>
+        <td class="mono">${money(line.price)}</td>
+        <td class="mono">${escapeHtml(line.qty || 0)}</td>
+        <td class="mono">${money(sales)}</td>
+      </tr>`;
+  }).join('') || '<tr><td colspan="10" style="color:var(--ink-soft);">Selected draft has no line items.</td></tr>';
+}
+
+el('saveDraftBtn').addEventListener('click', ()=>{
+  const draft = collectDraft({ draftId: makeRecordId() });
+  saveDraftObject(draft, false);
+  setMsg(el('localMsg'), `Saved new draft "${draft.draftName}" with ${draft.lines.length} line item(s) to this device.`, 'ok');
+});
+
+if(el('refreshDraftListBtn')){
+  el('refreshDraftListBtn').addEventListener('click', ()=>{
+    updateDraftStatus();
+    setMsg(el('localMsg'), 'Draft list refreshed.', 'ok');
+  });
+}
+
+if(el('clearAllDraftsBtn')){
+  el('clearAllDraftsBtn').addEventListener('click', ()=>{
+    if(!getDrafts().length) return;
+    if(!confirm('Clear all saved drafts from this device? This will not affect Google Sheet data.')) return;
+    setDrafts([]);
+    currentDraftId = '';
+    localStorage.removeItem(STORAGE.selectedDraftId);
+    updateDraftStatus();
+    setMsg(el('localMsg'), 'All saved drafts were removed from this device.', 'warn');
+  });
+}
+
+if(el('draftListBody')){
+  el('draftListBody').addEventListener('click', event=>{
+    const btn = event.target.closest('button[data-draft-action]');
+    if(!btn) return;
+    const draftId = btn.dataset.draftId;
+    const draft = getDrafts().find(d=>d.draftId === draftId);
+    if(!draft) return;
+    const action = btn.dataset.draftAction;
+    if(action === 'preview'){
+      currentDraftId = draftId;
+      localStorage.setItem(STORAGE.selectedDraftId, draftId);
+      renderDraftPreview(draft);
+    }
+    if(action === 'load'){
+      loadDraftObject(draft);
+      document.querySelector('nav.tabs button[data-tab="entry"]').click();
+      setMsg(el('localMsg'), `Draft "${draft.draftName || 'Untitled Draft'}" loaded to the Entry Form.`, 'ok');
+    }
+    if(action === 'delete'){
+      if(confirm(`Delete draft "${draft.draftName || 'Untitled Draft'}" from this device?`)) deleteDraftById(draftId, true);
+    }
+  });
+}
+
+/* ---------- Upload with duplicate choices ---------- */
+function collectRows(){
+  const activity = el('f_activity').value.trim();
+  const venue = el('f_venue').value.trim();
+  const datetime = el('f_datetime').value;
+  const preparedBy = el('f_preparedby').value.trim();
+  const exhibitor = el('f_exhibitor').value.trim();
+
+  return Array.from(document.querySelectorAll('#lineBody tr')).map(tr=>{
+    const price = parseFloat(tr.querySelector('.c-price').value)||0;
+    const qty = parseFloat(tr.querySelector('.c-qty').value)||0;
+    if(!tr.dataset.recordId) tr.dataset.recordId = makeRecordId();
+    return {
+      'Record ID': tr.dataset.recordId,
+      'Timestamp': todayIso(),
+      'Activity': activity,
+      'Venue': venue,
+      'Date & Time': datetime,
+      'Prepared By': preparedBy,
+      'Exhibitor': exhibitor,
+      'Commodity/Product': tr.querySelector('.c-commodity').value.trim(),
+      'Place of Origin (Brgy/Sitio)': tr.querySelector('.c-origin').value.trim(),
+      'Beginning Inventory': tr.querySelector('.c-begin').value,
+      'Unit': tr.querySelector('.c-unit').value.trim(),
+      'Unit Price': price,
+      'Quantity Sold': qty,
+      'Ending Balance': tr.querySelector('.c-end').value,
+      'Sales': price*qty
+    };
+  }).filter(r=>r['Commodity/Product']!=='' || r['Quantity Sold']!==0 || r['Unit Price']!==0 || r['Place of Origin (Brgy/Sitio)']!=='' || r['Beginning Inventory']!=='');
+}
+
+el('submitBtn').addEventListener('click', async ()=>{
+  hideDuplicateBox();
+  const rows = collectRows();
+  if(rows.length===0){ setMsg(el('formMsg'), 'Add at least one line item first.', 'error'); return; }
+
+  // Always save or update a local draft first so data stays available even if upload fails.
+  const savedDraft = ensureCurrentFormSavedAsDraft();
+
+  if(!CONFIG.SHEET_URL){
+    setConnStatus(false);
+    setMsg(el('formMsg'), `No Google Sheet connected. Saved/updated draft "${savedDraft.draftName}" with ${rows.length} line item(s) on this device. Open Dashboard and tap Refresh Data when the connection is available.`, 'warn');
+    return;
+  }
+
+  pendingUploadRows = rows;
+  setMsg(el('formMsg'), 'Checking Google Sheet for duplicates...', 'warn');
+  try{
+    const check = await postToSheet({ action:'check', entries: rows });
+    if(check.status === 'error') throw new Error(check.message || 'Check failed');
+
+    if(check.duplicateCount > 0){
+      showDuplicateBox(check);
+      setMsg(el('formMsg'), `${check.duplicateCount} duplicate record(s) found. Choose how to continue below.`, 'warn');
+      return;
+    }
+    await uploadPendingRows('skip');
+  }catch(err){
+    setConnStatus(false);
+    ensureCurrentFormSavedAsDraft();
+    setMsg(el('formMsg'), 'Could not check/upload to Google Sheet. Your draft remains saved on this device.', 'error');
+  }
+});
+
+el('uploadSkipBtn').addEventListener('click', ()=>uploadPendingRows('skip'));
+el('uploadKeepBtn').addEventListener('click', ()=>uploadPendingRows('keep'));
+el('uploadOverwriteBtn').addEventListener('click', ()=>uploadPendingRows('overwrite'));
+
+async function uploadPendingRows(mode){
+  if(!pendingUploadRows.length){ setMsg(el('formMsg'), 'No pending rows to upload.', 'error'); return; }
+  setUploadButtonsDisabled(true);
+  setMsg(el('formMsg'), 'Uploading to Google Sheet...', 'warn');
+  try{
+    const result = await postToSheet({ action:'upload', mode, entries: pendingUploadRows });
+    if(result.status === 'error') throw new Error(result.message || 'Upload failed');
+    setConnStatus(true);
+    showUploadResult(result);
+    await loadFromSheet();
+    hideDuplicateBox();
+  }catch(err){
+    setConnStatus(false);
+    ensureCurrentFormSavedAsDraft();
+    setMsg(el('formMsg'), 'Upload failed. Your draft remains saved on this device.', 'error');
+  }finally{
+    setUploadButtonsDisabled(false);
+  }
+}
+
+async function postToSheet(payload){
+  const res = await fetch(CONFIG.SHEET_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload)
+  });
+  return await res.json();
+}
+
+function showDuplicateBox(check){
+  el('duplicateBox').style.display = 'block';
+  el('duplicateSummary').innerHTML = `
+    <span>${check.received} checked</span>
+    <span>${check.newCount} new</span>
+    <span>${check.duplicateCount} duplicate</span>
+  `;
+  el('duplicateBody').innerHTML = check.duplicates.map(d=>`
+    <tr>
+      <td>${escapeHtml(d.existingRow || d.note || 'Same batch')}</td>
+      <td>${escapeHtml(safeText(d.dateTime).slice(0,10))}</td>
+      <td>${escapeHtml(d.activity)}</td>
+      <td>${escapeHtml(d.exhibitor)}</td>
+      <td>${escapeHtml(d.commodity)}</td>
+      <td class="mono">${escapeHtml(d.quantitySold)}</td>
+      <td class="mono">${money(d.sales)}</td>
+    </tr>
+  `).join('');
+  el('duplicateBox').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function hideDuplicateBox(){
+  el('duplicateBox').style.display = 'none';
+  el('duplicateBody').innerHTML = '';
+  el('duplicateSummary').innerHTML = '';
+}
+
+function setUploadButtonsDisabled(disabled){
+  ['uploadSkipBtn','uploadKeepBtn','uploadOverwriteBtn','submitBtn'].forEach(id=>el(id).disabled = disabled);
+}
+
+function showUploadResult(result){
+  const summary = result.summary || {};
+  const added = summary.added || 0;
+  const skipped = summary.skipped || 0;
+  const overwritten = summary.overwritten || 0;
+  const kept = summary.keptAsCopy || 0;
+  const parts = [
+    `${added} uploaded`,
+    `${skipped} skipped duplicate(s)`,
+    `${kept} kept as new copies`,
+    `${overwritten} overwritten`
+  ];
+  setMsg(el('formMsg'), 'Upload complete: ' + parts.join(', ') + '.', 'ok');
+
+  if(skipped === 0){
+    if(currentDraftId) deleteDraftById(currentDraftId, false);
+    currentDraftId = '';
+    localStorage.removeItem(STORAGE.selectedDraftId);
+    if(el('f_draftname')) el('f_draftname').value = '';
+    updateDraftStatus();
+    setMsg(el('localMsg'), 'Uploaded successfully. The related local draft was removed from this device to avoid re-uploading the same records.', 'ok');
+  }else{
+    updateDraftStatus();
+    setMsg(el('localMsg'), 'Some records were skipped, so the related saved draft was kept on this device.', 'warn');
+  }
+}
+
+/* ---------- Dashboard ---------- */
+const FILTER_FIELDS = {
+  activity: { elementId:'fl_activity', dataKey:'Activity', label:'Activity' },
+  venue: { elementId:'fl_venue', dataKey:'Venue', label:'Venue' },
+  exhibitor: { elementId:'fl_exhibitor', dataKey:'Exhibitor', label:'Exhibitor' },
+  commodity: { elementId:'fl_commodity', dataKey:'Commodity/Product', label:'Commodity' }
+};
+const SEARCH_KEYS = [
+  'Record ID', 'Timestamp', 'Date & Time', 'Activity', 'Venue', 'Prepared By', 'Exhibitor',
+  'Commodity/Product', 'Place of Origin (Brgy/Sitio)', 'Beginning Inventory', 'Unit',
+  'Unit Price', 'Quantity Sold', 'Ending Balance', 'Sales', 'Upload Status'
+];
+
+function normalizeFilterValue(value){
+  return safeText(value).replace(/\s+/g,' ').trim().toLowerCase();
+}
+function dateKey(value){
+  const text = safeText(value).trim();
+  if(!text) return '';
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const d = new Date(text);
+  if(isNaN(d)) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function getEntryDateKey(entry){
+  return dateKey(entry['Date & Time'] || entry['Timestamp']);
+}
+function getFilterState(){
+  return {
+    activity: el('fl_activity').value,
+    venue: el('fl_venue').value,
+    exhibitor: el('fl_exhibitor').value,
+    commodity: el('fl_commodity').value,
+    from: el('fl_from').value,
+    to: el('fl_to').value,
+    search: el('fl_search').value.trim()
+  };
+}
+function entryMatchesFilters(entry, state, ignoreKey){
+  for(const [filterKey, meta] of Object.entries(FILTER_FIELDS)){
+    if(ignoreKey === filterKey) continue;
+    const chosen = normalizeFilterValue(state[filterKey]);
+    if(chosen && normalizeFilterValue(entry[meta.dataKey]) !== chosen) return false;
+  }
+
+  const entryDate = getEntryDateKey(entry);
+  if(ignoreKey !== 'from' && state.from && (!entryDate || entryDate < state.from)) return false;
+  if(ignoreKey !== 'to' && state.to && (!entryDate || entryDate > state.to)) return false;
+
+  if(ignoreKey !== 'search' && state.search){
+    const tokens = normalizeFilterValue(state.search).split(' ').filter(Boolean);
+    const haystack = SEARCH_KEYS.map(key => safeText(entry[key])).join(' ').replace(/\s+/g,' ').toLowerCase();
+    if(tokens.some(token => !haystack.includes(token))) return false;
+  }
+  return true;
+}
+function filteredDashboardEntries(state){
+  return allEntries.filter(entry => entryMatchesFilters(entry, state));
+}
+function uniqueValuesFor(dataKey, state, ignoreKey){
+  return [...new Set(
+    allEntries
+      .filter(entry => entryMatchesFilters(entry, state, ignoreKey))
+      .map(entry => safeText(entry[dataKey]).trim())
+      .filter(Boolean)
+  )].sort((a,b)=>a.localeCompare(b));
+}
+function setSelectOptions(selectId, dataKey, state, ignoreKey){
+  const sel = el(selectId);
+  const current = sel.value;
+  const values = uniqueValuesFor(dataKey, state, ignoreKey);
+  if(current && !values.some(v => normalizeFilterValue(v) === normalizeFilterValue(current))){
+    values.unshift(current);
+  }
+  sel.innerHTML = '<option value="">All</option>' + values.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  sel.value = current;
+}
+function describeActiveFilters(state, count){
+  const parts = [];
+  for(const [filterKey, meta] of Object.entries(FILTER_FIELDS)){
+    if(state[filterKey]) parts.push(`${meta.label}: ${state[filterKey]}`);
+  }
+  if(state.from) parts.push(`From: ${state.from}`);
+  if(state.to) parts.push(`To: ${state.to}`);
+  if(state.search) parts.push(`Search: ${state.search}`);
+  const text = parts.length ? `Active filters — ${parts.join(' | ')}. Matching records: ${count}.` : 'No active filters.';
+  el('filterState').textContent = text;
+}
+function populateFilterOptions(){
+  const state = getFilterState();
+  for(const [filterKey, meta] of Object.entries(FILTER_FIELDS)){
+    setSelectOptions(meta.elementId, meta.dataKey, state, filterKey);
+  }
+}
+function refreshDashboardView(){
+  populateFilterOptions();
+  renderDashboard();
+}
+Object.values(FILTER_FIELDS).forEach(meta=>{
+  el(meta.elementId).addEventListener('change', refreshDashboardView);
+});
+['fl_from','fl_to'].forEach(id=>{
+  el(id).addEventListener('change', refreshDashboardView);
+});
+el('fl_search').addEventListener('input', refreshDashboardView);
+el('trendPeriod').addEventListener('change', renderDashboard);
+el('clearSearchBtn').addEventListener('click', ()=>{
+  el('fl_search').value = '';
+  refreshDashboardView();
+});
+el('clearFiltersBtn').addEventListener('click', ()=>{
+  Object.values(FILTER_FIELDS).forEach(meta=>{ el(meta.elementId).value = ''; });
+  el('fl_from').value = '';
+  el('fl_to').value = '';
+  el('fl_search').value = '';
+  refreshDashboardView();
+});
+
+let chartCommodity, chartExhibitor, chartSalesTrend, chartExhibitorTrend;
+
+function localDateFromKey(key){
+  const clean = safeText(key).slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(clean)) return null;
+  const [y,m,d] = clean.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+function dateKeyFromLocalDate(date){
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+function shortDateLabel(date){
+  return date.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+}
+function monthLabelFromKey(monthKey){
+  const [y,m] = monthKey.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month:'short', year:'numeric' });
+}
+function trendBucketFromDateKey(entryDateKey, period){
+  const date = localDateFromKey(entryDateKey);
+  if(!date) return null;
+
+  if(period === 'monthly'){
+    const key = entryDateKey.slice(0,7);
+    return { key, label: monthLabelFromKey(key), sortDate: new Date(date.getFullYear(), date.getMonth(), 1) };
+  }
+
+  if(period === 'weekly'){
+    const day = date.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const start = new Date(date);
+    start.setDate(date.getDate() + diffToMonday);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    const key = dateKeyFromLocalDate(start);
+    return { key, label: `${shortDateLabel(start)} - ${shortDateLabel(end)}`, sortDate: start };
+  }
+
+  return { key: entryDateKey, label: shortDateLabel(date), sortDate: date };
+}
+function buildTrendData(entries, period){
+  const buckets = new Map();
+  entries.forEach(entry=>{
+    const entryDate = getEntryDateKey(entry);
+    const bucket = trendBucketFromDateKey(entryDate, period);
+    if(!bucket) return;
+    if(!buckets.has(bucket.key)){
+      buckets.set(bucket.key, { ...bucket, sales:0, exhibitors:new Set() });
+    }
+    const item = buckets.get(bucket.key);
+    item.sales += parseFloat(entry['Sales']) || 0;
+    const exhibitor = safeText(entry['Exhibitor']).trim();
+    if(exhibitor) item.exhibitors.add(exhibitor);
+  });
+
+  return [...buckets.values()]
+    .sort((a,b)=>a.sortDate - b.sortDate)
+    .map(item=>({ label:item.label, sales:item.sales, exhibitorCount:item.exhibitors.size }));
+}
+
+function renderDashboard(){
+  const state = getFilterState();
+  const filtered = filteredDashboardEntries(state);
+  describeActiveFilters(state, filtered.length);
+
+  if(allEntries.length){
+    el('dashMsg').textContent = `Showing ${filtered.length} of ${allEntries.length} loaded entr${allEntries.length === 1 ? 'y' : 'ies'}.`;
+  }
+
+  const totalSales = filtered.reduce((s,e)=>s+(parseFloat(e['Sales'])||0),0);
+  const totalQty = filtered.reduce((s,e)=>s+(parseFloat(e['Quantity Sold'])||0),0);
+  el('st_sales').textContent = money(totalSales);
+  el('st_qty').textContent = totalQty.toLocaleString();
+  el('st_entries').textContent = filtered.length;
+
+  const byExhibitor = {};
+  filtered.forEach(e=>{
+    const key = e['Exhibitor'] || 'Unspecified';
+    byExhibitor[key] = (byExhibitor[key]||0) + (parseFloat(e['Sales'])||0);
+  });
+  const topExhibitor = Object.entries(byExhibitor).sort((a,b)=>b[1]-a[1])[0];
+  el('st_top').textContent = topExhibitor ? topExhibitor[0] : '—';
+
+  const byCommodity = {};
+  filtered.forEach(e=>{
+    const key = e['Commodity/Product'] || 'Unspecified';
+    byCommodity[key] = (byCommodity[key]||0) + (parseFloat(e['Sales'])||0);
+  });
+
+  const trendPeriod = el('trendPeriod').value || 'daily';
+  const trendData = buildTrendData(filtered, trendPeriod);
+  drawLineChart('chartSalesTrend', trendData, 'sales', 'Total Sales', value=>money(value), 'sales');
+  drawLineChart('chartExhibitorTrend', trendData, 'exhibitorCount', 'Participating Exhibitors', value=>(parseFloat(value)||0).toLocaleString(), 'exhibitors');
+  drawBar('chartCommodity', byCommodity, 'Sales', value=>money(value), 'sales');
+  drawBar('chartExhibitor', byExhibitor, 'Sales', value=>money(value), 'sales');
+
+  const tbody = el('dashBody');
+  tbody.innerHTML = filtered.map(e=>`
+    <tr>
+      <td>${escapeHtml(getEntryDateKey(e) || safeText(e['Date & Time']||e['Timestamp']||'').slice(0,10))}</td>
+      <td>${escapeHtml(e['Activity']||'')}</td>
+      <td>${escapeHtml(e['Venue']||'')}</td>
+      <td>${escapeHtml(e['Prepared By']||'')}</td>
+      <td>${escapeHtml(e['Exhibitor']||'')}</td>
+      <td>${escapeHtml(e['Commodity/Product']||'')}</td>
+      <td>${escapeHtml(e['Place of Origin (Brgy/Sitio)']||'')}</td>
+      <td class="mono">${money(e['Unit Price'])}</td>
+      <td class="mono">${escapeHtml(e['Quantity Sold']||0)}</td>
+      <td class="mono">${money(e['Sales'])}</td>
+      <td>${escapeHtml(e['Upload Status']||'')}</td>
+    </tr>`).join('') || '<tr><td colspan="11" style="color:var(--ink-soft);">No matching entries. Try clearing one or more filters.</td></tr>';
+}
+
+function readablePeriodLabel(){
+  const period = el('trendPeriod') ? el('trendPeriod').value : 'daily';
+  if(period === 'weekly') return 'week';
+  if(period === 'monthly') return 'month';
+  return 'day';
+}
+function noDataPlugin(message){
+  return {
+    id:'noDataMessage',
+    afterDraw(chart){
+      const hasData = chart.data.datasets.some(dataset => dataset.data && dataset.data.length);
+      if(hasData) return;
+      const { ctx, chartArea } = chart;
+      ctx.save();
+      ctx.fillStyle = '#6B6355';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '600 13px Inter, sans-serif';
+      ctx.fillText(message, (chartArea.left + chartArea.right) / 2, (chartArea.top + chartArea.bottom) / 2);
+      ctx.restore();
+    }
+  };
+}
+function destroyChartById(canvasId){
+  if(canvasId === 'chartCommodity' && chartCommodity){ chartCommodity.destroy(); chartCommodity = null; }
+  if(canvasId === 'chartExhibitor' && chartExhibitor){ chartExhibitor.destroy(); chartExhibitor = null; }
+  if(canvasId === 'chartSalesTrend' && chartSalesTrend){ chartSalesTrend.destroy(); chartSalesTrend = null; }
+  if(canvasId === 'chartExhibitorTrend' && chartExhibitorTrend){ chartExhibitorTrend.destroy(); chartExhibitorTrend = null; }
+}
+function setChartById(canvasId, chart){
+  if(canvasId === 'chartCommodity') chartCommodity = chart;
+  if(canvasId === 'chartExhibitor') chartExhibitor = chart;
+  if(canvasId === 'chartSalesTrend') chartSalesTrend = chart;
+  if(canvasId === 'chartExhibitorTrend') chartExhibitorTrend = chart;
+}
+function drawBar(canvasId, dataObj, label, formatTick, formatType){
+  const ctx = el(canvasId).getContext('2d');
+  const labels = Object.keys(dataObj);
+  const values = Object.values(dataObj);
+  destroyChartById(canvasId);
+  const chart = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ label, data: values, borderRadius:5 }] },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:(context)=>`${label}: ${formatTick(context.raw)}` } }
+      },
+      scales:{
+        x:{ ticks:{ autoSkip:false, maxRotation:45, minRotation:0 } },
+        y:{ beginAtZero:true, ticks:{ callback:value=>formatTick(value) } }
+      }
+    },
+    plugins:[noDataPlugin('No data to display')]
+  });
+  setChartById(canvasId, chart);
+}
+function drawLineChart(canvasId, rows, dataKey, label, formatTick, formatType){
+  const ctx = el(canvasId).getContext('2d');
+  destroyChartById(canvasId);
+  const periodLabel = readablePeriodLabel();
+  const chart = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: rows.map(row=>row.label),
+      datasets:[{
+        label,
+        data: rows.map(row=>row[dataKey]),
+        tension:.25,
+        pointRadius:3,
+        pointHoverRadius:5,
+        fill:false
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:(context)=>`${label}: ${formatTick(context.raw)}` } }
+      },
+      scales:{
+        x:{ title:{ display:true, text:`Grouped by ${periodLabel}` }, ticks:{ autoSkip:true, maxRotation:45, minRotation:0 } },
+        y:{ beginAtZero:true, ticks:{ precision: formatType === 'exhibitors' ? 0 : undefined, callback:value=>formatTick(value) } }
+      }
+    },
+    plugins:[noDataPlugin('No trend data to display')]
+  });
+  setChartById(canvasId, chart);
+}
+
+/* ---------- Init ---------- */
+migrateLegacyDraft();
+currentDraftId = localStorage.getItem(STORAGE.selectedDraftId) || '';
+addLineRow();
+setConnStatus(false);
+updateDraftStatus();
+populateFilterOptions();
+renderDashboard();
+if(CONFIG.SHEET_URL) loadFromSheet();
+</script>
+</body>
+</html>
